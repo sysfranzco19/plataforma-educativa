@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AdminModel;
+use App\Models\DocenteModel;
 use CodeIgniter\RESTful\ResourceController;
 
 class AuthController extends ResourceController
@@ -18,33 +19,59 @@ class AuthController extends ResourceController
             return $this->failValidationError('Email y password son requeridos');
         }
 
-        $model = new AdminModel();
+        $email = $data['email'];
+        $password = $data['password']; // NO MD5
 
-        // Buscar admin por email
-        $admin = $model->where('email', $data['email'])->first();
+        // =============================
+        // 1. Buscar Admin
+        // =============================
+        $adminModel = new AdminModel();
+        $admin = $adminModel->where('email', $email)->first();
 
-        if (!$admin) {
-            return $this->failNotFound('Administrador no encontrado');
+        if ($admin && password_verify($password, $admin['password'])) {
+
+            $token = createToken([
+                'id'      => $admin['id'],
+                'email'   => $admin['email'],
+                'nombre'  => $admin['nombre'],
+                'apellido'=> $admin['apellido'],
+                'role'    => 'admin'
+            ]);
+
+            return $this->respond([
+                'message' => 'Login correcto (Admin)',
+                'role'    => 'admin',
+                'token'   => $token
+            ]);
         }
 
-        // Comparar password md5
-        if ($admin['password'] !== md5($data['password'])) {
-            return $this->failUnauthorized('Password incorrecto');
+        // =============================
+        // 2. Buscar Docente
+        // =============================
+        $docenteModel = new DocenteModel();
+        $docente = $docenteModel->where('email', $email)->first();
+
+        if ($docente && password_verify($password, $docente['password'])) {
+
+            $token = createToken([
+                'id'      => $docente['id'],
+                'email'   => $docente['email'],
+                'nombre'  => $docente['nombre'],
+                'apellido'=> $docente['apellido'],
+                'role'    => 'docente'
+            ]);
+
+            return $this->respond([
+                'message' => 'Login correcto (Docente)',
+                'role'    => 'docente',
+                'token'   => $token
+            ]);
         }
 
-        // Crear token
-        $token = createToken([
-            'id'      => $admin['id'],
-            'email'   => $admin['email'],
-            'nombre'  => $admin['nombre'],
-            'apellido'=> $admin['apellido'],
-            'role'    => 'admin'
-        ]);
-
-        return $this->respond([
-            'message' => 'Login correcto',
-            'token'   => $token
-        ]);
+        // ======================================
+        // No coincide con Admin ni Docente
+        // ======================================
+        return $this->failUnauthorized('Credenciales inválidas');
     }
 
 
@@ -61,6 +88,7 @@ class AuthController extends ResourceController
 
         try {
             $decoded = validateToken($token);
+
             return $this->respond([
                 'valid' => true,
                 'data'  => $decoded

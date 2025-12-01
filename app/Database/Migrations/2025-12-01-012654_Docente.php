@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class Admin extends Migration
+class Docente extends Migration
 {
     public function up()
     {
@@ -55,11 +55,11 @@ class Admin extends Migration
         ]);
 
         $this->forge->addPrimaryKey('id');
-        $this->forge->createTable('admin');
+        $this->forge->createTable('docente');
     }
 
     public function down()
     {
-        $this->forge->dropTable('admin');
+        $this->forge->dropTable('docente');
     }
 }
